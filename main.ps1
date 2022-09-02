@@ -1,3 +1,4 @@
+# https://theposhwolf.com/howtos/Get-LoginEvents/
 Function Get-LoginEvents {
     Param (
         [Parameter(
@@ -50,6 +51,32 @@ Function Get-LoginEvents {
     End{}
 }
 
+Function Get-LoginList ($room, $rmnum) {
+#     $list_computers = (Get-ADComputer -Filter * -SearchBase $($room)).Name
+#     foreach ($computer in $list_computers) {
+#     Write-Host("Looking through the audit logs of $($computer)")
+#     $computer | 
+#     Get-LoginEvents -StartTime (Get-Date).AddDays(-7) | 
+#     Where-Object {$_.UserDomain -ilike "CEI"}| Where-Object LogonType -eq 'Interactive' |
+#     Select-Object -Property ComputerName, UserAccount, UserDomain, TimeStamp |
+#     Export-Csv -Path ".\LoginCount $($rmnum) $((Get-Date).ToString('MM-dd-yyyy')).csv" -NoTypeInformation -Append
+# }
 
-# https://theposhwolf.com/howtos/Get-LoginEvents/
-Get-LoginEvents -StartTime (Get-Date).AddHours(-1) | Where-Object {$_.UserDomain -eq "NT AUTHORITY"}
+}
+
+
+$RM518 = "OU=RM 518,OU=Lab,OU=Building 5,OU=IF Classroom,OU=CEI Computers,DC=CEI,DC=EDU"
+$RM516 = "OU=RM 516,OU=Lab,OU=Building 5,OU=IF Classroom,OU=CEI Computers,DC=CEI,DC=EDU"
+$RM508 = "OU=RM 508,OU=Lab,OU=Building 5,OU=IF Classroom,OU=CEI Computers,DC=CEI,DC=EDU"
+#Library 
+$RM526 = "OU=RM 526,OU=Open Lab,OU=Building 5,OU=IF Classroom,OU=CEI Computers,DC=CEI,DC=EDU"
+
+$list_computers = (Get-ADComputer -Filter * -SearchBase $RM518).Name
+    foreach ($computer in $list_computers) {
+    Write-Host("Looking through the audit logs of $($computer)")
+    $computer | 
+    Get-LoginEvents -StartTime (Get-Date).AddDays(-7) | 
+    Where-Object {$_.UserDomain -ilike "CEI"}| Where-Object LogonType -eq 'Interactive' |
+    Select-Object -Property ComputerName, UserAccount, UserDomain, TimeStamp |
+    Export-Csv -Path ".\LoginCount RM518 $((Get-Date).ToString('MM-dd-yyyy')).csv" -NoTypeInformation -Append
+}
