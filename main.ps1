@@ -7,10 +7,10 @@ Function Get-LoginEvents {
         )]
         [Alias('Name')]
         [string]$ComputerName = $env:ComputerName
-        ,
-        [datetime]$StartTime
-        ,
-        [datetime]$EndTime
+        # ,
+        # [datetime]$StartTime
+        # ,
+        # [datetime]$EndTime
     )
     Begin {
         enum LogonTypes {
@@ -27,13 +27,15 @@ Function Get-LoginEvents {
         $filterHt = @{
             LogName = 'Security'
             ID = 4624
+            StartTime = Get-Date -Date "08/26/2022"
+            EndTime = Get-Date -Date "09/02/2022"
         }
-        if ($PSBoundParameters.ContainsKey('StartTime')){
-            $filterHt['StartTime'] = $StartTime
-        }
-        if ($PSBoundParameters.ContainsKey('EndTime')){
-            $filterHt['EndTime'] = $EndTime
-        }
+        # if ($PSBoundParameters.ContainsKey('StartTime')){
+        #     $filterHt['StartTime'] = $StartTime
+        # }
+        # if ($PSBoundParameters.ContainsKey('EndTime')){
+        #     $filterHt['EndTime'] = $EndTime
+        # }
     }
     Process {
         Get-WinEvent -ComputerName $ComputerName -FilterHashtable $filterHt | foreach-Object {
@@ -51,32 +53,37 @@ Function Get-LoginEvents {
     End{}
 }
 
-Function Get-LoginList ($room, $rmnum) {
-#     $list_computers = (Get-ADComputer -Filter * -SearchBase $($room)).Name
-#     foreach ($computer in $list_computers) {
-#     Write-Host("Looking through the audit logs of $($computer)")
-#     $computer | 
-#     Get-LoginEvents -StartTime (Get-Date).AddDays(-7) | 
-#     Where-Object {$_.UserDomain -ilike "CEI"}| Where-Object LogonType -eq 'Interactive' |
-#     Select-Object -Property ComputerName, UserAccount, UserDomain, TimeStamp |
-#     Export-Csv -Path ".\LoginCount $($rmnum) $((Get-Date).ToString('MM-dd-yyyy')).csv" -NoTypeInformation -Append
-# }
-
+function Get-Manual {
+    $path = (Get-Location).path 
+    Get-LoginEvents |
+    Where-Object UserDomain -ilike "*CEI*" |
+    Where-Object UserAccount -NotLike "ldvadmin01"| 
+    Where-Object UserAccount -NotLike "leighiam.virrey"|
+    Where-Object LogonType -Like "Interactive" |
+    Select-Object -Property ComputerName, UserAccount, UserDomain, LogonType, TimeStamp |
+    Export-Csv -Path "$path\LoginCount $((Get-Date).ToString('MM-dd-yyyy')).csv" -NoTypeInformation -Append
 }
 
-
+function Get-Remote {
+    Param (
+        [string]$RoomOU,
+        [string]$RoomNumber
+    )
+    $list_computers = (Get-ADComputer -Filter * -SearchBase $RoomOU).Name
+        foreach ($computer in $list_computers) {
+            write-host("The $computer audit log is getting pulled.")
+            Invoke-Command -ComputerName $computer -ScriptBlock ${Function:Get-LoginEvents} |
+            Where-Object UserDomain -ilike "*CEI*" |
+            Where-Object UserAccount -NotLike "ldvadmin01"| 
+            Where-Object UserAccount -NotLike "leighiam.virrey"|
+            Where-Object LogonType -Like "Interactive" |
+            Select-Object -Property ComputerName, UserAccount, UserDomain, LogonType, TimeStamp |
+            Export-Csv -Path ".\LoginCount $RoomNumber $((Get-Date).ToString('MM-dd-yyyy')).csv" -NoTypeInformation -Append
+        }
+}
 $RM518 = "OU=RM 518,OU=Lab,OU=Building 5,OU=IF Classroom,OU=CEI Computers,DC=CEI,DC=EDU"
 $RM516 = "OU=RM 516,OU=Lab,OU=Building 5,OU=IF Classroom,OU=CEI Computers,DC=CEI,DC=EDU"
 $RM508 = "OU=RM 508,OU=Lab,OU=Building 5,OU=IF Classroom,OU=CEI Computers,DC=CEI,DC=EDU"
-#Library 
+# Library 
 $RM526 = "OU=RM 526,OU=Open Lab,OU=Building 5,OU=IF Classroom,OU=CEI Computers,DC=CEI,DC=EDU"
-
-$list_computers = (Get-ADComputer -Filter * -SearchBase $RM518).Name
-    foreach ($computer in $list_computers) {
-    Write-Host("Looking through the audit logs of $($computer)")
-    $computer | 
-    Get-LoginEvents -StartTime (Get-Date).AddDays(-7) | 
-    Where-Object {$_.UserDomain -ilike "CEI"}| Where-Object LogonType -eq 'Interactive' |
-    Select-Object -Property ComputerName, UserAccount, UserDomain, TimeStamp |
-    Export-Csv -Path ".\LoginCount RM518 $((Get-Date).ToString('MM-dd-yyyy')).csv" -NoTypeInformation -Append
-}
+$RM20 = "OU=RM 25,OU=Lab,OU=Building 1,OU=IF Classroom,OU=CEI Computers,DC=CEI,DC=EDU"
